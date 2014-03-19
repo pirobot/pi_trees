@@ -1,0 +1,26 @@
+<package>
+  <name>pi_trees_ros</name>
+  <version>0.1.0</version>
+
+  <description>ROS wrappers for the pi_trees_lib Library</description>
+
+  <maintainer email="patrick@pirobot.org">Patrick Goebel</maintainer>
+  <license>BSD</license>
+  <url type="website">http://ros.org/wiki/pi_trees</url>
+  <url type="bugtracker">https://github.com/pirobot/pi_trees/issues</url>
+  <author email="patrick@pirobot.org">Patrick Goebel</author>
+
+  <!-- Dependencies which this package needs to build itself. -->
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <!-- Dependencies needed to compile this package. -->
+  <build_depend>roscpp</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>pi_trees_lib</build_depend>
+
+  <!-- Dependencies needed after this package is compiled. -->
+  <run_depend>roscpp</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>pi_trees_lib</run_depend>
+
+</package>
