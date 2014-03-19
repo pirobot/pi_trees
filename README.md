@@ -1,2 +1,1 @@
-This repository will eventually hold a ROS/Python package for
-implementing Behavior Trees.
+A Python/ROS package for implementing Behavior Trees.
