@@ -23,7 +23,7 @@
 
 import rospy
 from std_msgs.msg import Float32
-from pi_trees.pi_trees import *
+from pi_trees_ros import *
 import time
 
 class MonitorTopicExample():
@@ -33,6 +33,15 @@ class MonitorTopicExample():
         
         # The "stay charged" node
         STAY_CHARGED = Selector("stay_charged")
+        
+        # Check the battery level (uses MonitorTask)
+        CHECK_BATTERY = MonitorTask("CHECK_BATTERY", "battery_level", Float32, self.check_battery)
+        
+        # The charge robot task (uses ServiceTask)
+        CHARGE_ROBOT = ServiceTask("CHARGE_ROBOT", "battery_simulator/set_battery_level", SetBatteryLevel, 100, result_cb=self.recharge_cb)
+  
+        # Build the recharge sequence using inline construction
+        RECHARGE = Sequence("RECHARGE", [NAV_DOCK_TASK, CHARGE_ROBOT])
         
         # The check battery condition
         CHECK_BATTERY = CheckBattery("check_battery", "battery_level", Float32, True)

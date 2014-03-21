@@ -37,6 +37,7 @@ class MonitorTask(Task):
         self.msg_type = msg_type
         self.timeout = timeout
         self.msg_cb = msg_cb
+
                 
         rospy.loginfo("Subscribing to topic " + topic)
         
@@ -198,4 +199,3 @@ class SimpleActionTask(Task):
         self.action_finished = False
         self.goal_status_reported = False
         self.time_so_far = 0.0
-        

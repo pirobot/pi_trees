@@ -21,7 +21,7 @@
     http://www.gnu.org/licenses/gpl.html
 """
 
-import sys, string
+import string
 import pygraphviz as pgv
 
 class TaskStatus():
@@ -29,11 +29,6 @@ class TaskStatus():
     FAILURE = 0
     SUCCESS = 1
     RUNNING = 2
-
-class ParallelSuccess():
-    """ A class for enumerating two different parallel task types """
-    REQUIRE_ONE = 0
-    REQUIRE_ALL = 1
     
 class Task(object):
     """ "The base Task class """
@@ -135,33 +130,48 @@ class Iterator(Task):
             
         return TaskStatus.SUCCESS
     
-class Parallel(Task):
+class ParallelOne(Task):
     """
-        A parallel task runs each child task at the same time.
-        If the success policy is REQUIRE_ONE, then a SUCCESS will be
-        returned as soon as one child succeeds.  If the success policy
-        is REQUIRE_ALL, then a FAILURE will be returned as soon as one 
-        task fails.  Otherwise, a SUCCESS is returned.
+        A parallel task runs each child task at (roughly) the same time.
+        The ParallelOne task returns success as soon as any child succeeds.
     """
-    def __init__(self, name, policy, *args, **kwargs):
-        super(Parallel, self).__init__(name, *args, **kwargs)
-        
-        self.all_must_succeed = (policy == ParallelSuccess.REQUIRE_ALL)
- 
+    def __init__(self, name, *args, **kwargs):
+        super(ParallelOne, self).__init__(name, *args, **kwargs)
+                 
     def run(self):
         for c in self.children:
-            
             c.status = c.run()
-                         
-            if c.status == TaskStatus.FAILURE and self.all_must_succeed:
-                return TaskStatus.FAILURE
-            
-            if c.status == TaskStatus.SUCCESS and not self.all_must_succeed:
-                return TaskStatus.SUCCESS
-            
-            else:
-                return TaskStatus.RUNNING             
 
+            if c.status == TaskStatus.SUCCESS:
+                return TaskStatus.SUCCESS
+        
+        return TaskStatus.FAILURE
+        
+class ParallelAll(Task):
+    """
+        A parallel task runs each child task at (roughly) the same time.
+        The ParallelAll task requires all subtasks to succeed for it to succeed.
+    """
+    def __init__(self, name, *args, **kwargs):
+        super(ParallelAll, self).__init__(name, *args, **kwargs)
+                 
+    def run(self):
+        n_success = 0
+        n_children = len(self.children)
+
+        for c in self.children:
+            c.status = c.run()
+            if c.status == TaskStatus.SUCCESS:
+                n_success += 1
+
+            if c.status == TaskStatus.FAILURE:
+                return TaskStatus.FAILURE
+
+        if n_success == n_children:
+            return TaskStatus.SUCCESS
+        else:
+            return TaskStatus.RUNNING
+        
 class Loop(Task):
     """
         Loop over one or more subtasks for the given number of iterations
@@ -218,6 +228,30 @@ class IgnoreFailure(Task):
             else:
                 return c.status
 
+        return TaskStatus.SUCCESS
+    
+class AutoRemoveSequence(Task):
+    """ 
+        Remove each successful subtask from a sequence 
+    """
+    def __init__(self, name, *args, **kwargs):
+        super(AutoRemoveSequence, self).__init__(name, *args, **kwargs)
+ 
+    def run(self):
+        for c in self.children:
+            c.status = c.run()
+            
+            if c.status == TaskStatus.FAILURE:
+                return TaskStatus.FAILURE
+            
+            if c.statuss == TaskStatus.RUNNING:
+                return TaskStatus.RUNNING
+        
+            try:
+                self.children.remove(self.children[0])
+            except:
+                return TaskStatus.FAILURE
+                
         return TaskStatus.SUCCESS
 
 class loop(Task):
@@ -281,30 +315,6 @@ class ignore_failure(Task):
         self.task.run = self.run
         
         return self.task
-
-class AutoRemoveSequence(Task):
-    """ 
-        Remove each successful subtask from a sequence 
-    """
-    def __init__(self, name, *args, **kwargs):
-        super(AutoRemoveSequence, self).__init__(name, *args, **kwargs)
- 
-    def run(self):
-        for c in self.children:
-            c.status = c.run()
-            
-            if c.status == TaskStatus.FAILURE:
-                return TaskStatus.FAILURE
-            
-            if c.statuss == TaskStatus.RUNNING:
-                return TaskStatus.RUNNING
-        
-            try:
-                self.children.remove(self.children[0])
-            except:
-                return TaskStatus.FAILURE
-                
-        return TaskStatus.SUCCESS
 
 def print_tree(tree, indent=0):
     """

@@ -10,13 +10,7 @@
   <url type="bugtracker">https://github.com/pirobot/pi_trees/issues</url>
   <author email="patrick@pirobot.org">Patrick Goebel</author>
 
-  <!-- Dependencies which this package needs to build itself. -->
   <buildtool_depend>catkin</buildtool_depend>
-  
-  <!-- Dependencies needed to compile this package. -->
-  <build_depend>roscpp</build_depend>
-  <build_depend>rospy</build_depend>
-  <build_depend>pi_trees_lib</build_depend>
 
   <!-- Dependencies needed after this package is compiled. -->
   <run_depend>roscpp</run_depend>

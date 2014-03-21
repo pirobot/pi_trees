@@ -21,35 +21,25 @@
     http://www.gnu.org/licenses/gpl.html
 """
 
-from pi_trees.pi_trees import *
+from pi_trees_lib.pi_trees_lib import *
 import time
 
 class CountingExample():
     def __init__(self):
         # The root node
-        BEHAVE = Sequence("behave")
+        BEHAVE = Selector("behave")
         
-        # The "stay charged" node
-        STAY_CHARGED = Selector("stay_charged")
+        PARALLEL_TASKS = ParallelOne("Counting in Parallel")
         
-        # The check battery condition
-        CHECK_BATTERY = FakeCheckBattery("check_battery")
+        COUNT2 = Count("**", 1, 2, 1)
+        COUNT5 = Count("+++++", 5, 1, -1)
+        COUNT16 = Count("--------", 1, 16, 1)
 
-        # Add the check battery and recharge tasks to the stay healthy task
-        STAY_CHARGED.add_child(CHECK_BATTERY)
+        PARALLEL_TASKS.add_child(COUNT2)
+        PARALLEL_TASKS.add_child(COUNT5)
+        PARALLEL_TASKS.add_child(COUNT16)
         
-        COUNT3 = Count("count 3", n=3)
-        COUNT5 = Count("count 5", n=5)
-        COUNT7 = Count("count 7", n=7)
-        
-        LOOP2 = Loop("loop 2", iterations=2)
-        LOOP2.add_child(COUNT3)
-
-        # Build the full tree from the two subtrees
-        #BEHAVE.add_child(STAY_CHARGED)
-        BEHAVE.add_child(LOOP2)
-        BEHAVE.add_child(COUNT5)
-        BEHAVE.add_child(COUNT7)
+        BEHAVE.add_child(PARALLEL_TASKS)
                 
         print "Behavior Tree Structure"
         print_tree(BEHAVE)
@@ -60,47 +50,29 @@ class CountingExample():
             if status == TaskStatus.SUCCESS:
                 print "Finished running tree."
                 break
-    
+                
 class Count(Task):
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name, start, stop, step, *args, **kwargs):
         super(Count, self).__init__(name, *args, **kwargs)
         
-        self.n = kwargs['n']
-        self.count = 0
-        print "Creating task Count", self.n
+        self.name = name
+        self.start = start
+        self.stop = stop
+        self.step = step
+        self.count = self.start
+        print "Creating task Count", self.start, self.stop, self.step
  
     def run(self):
-        if self.count < self.n:
-            print "Counting...", self.count
+        if abs(self.count - self.stop - self.step) > 0:
+            print self.name, self.count
             time.sleep(0.5)
-            self.count += 1
+            self.count += self.step
             return TaskStatus.RUNNING
 
         return TaskStatus.SUCCESS
     
     def reset(self):
-        self.count = 0
-        
-class FakeCheckBattery(Task):
-    def __init__(self, name, counter=3):
-        super(FakeCheckBattery, self).__init__(name)
-        print "Connecting to battery monitor"
-        self.counter = counter
-        self.level = counter
- 
-    def run(self):
-        time.sleep(0.5)
-        if self.level == 0:
-            print("LOW BATTERY!")
-            print("Recharging...")
-            time.sleep(2)
-            print("Battery Recharged")
-            self.level = self.counter
-        else:
-            self.level -= 1
-            print("Battery is OK.")
-            return TaskStatus.SUCCESS
-
+        self.count = self.start
 
 if __name__ == '__main__':
     tree = CountingExample()
