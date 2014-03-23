@@ -37,7 +37,6 @@ class MonitorTask(Task):
         self.msg_type = msg_type
         self.timeout = timeout
         self.msg_cb = msg_cb
-
                 
         rospy.loginfo("Subscribing to topic " + topic)
         
@@ -180,8 +179,8 @@ class SimpleActionTask(Task):
     def active_cb(self):
         pass
         
-#    def feedback_cb(self, msg):
-#        pass
+    def feedback_cb(self, msg):
+        pass
             
     def default_done_cb(self, status, result):
         # Check the current goal status in case we have been preempted
@@ -190,9 +189,6 @@ class SimpleActionTask(Task):
         if not self.goal_status_reported:
             rospy.loginfo(str(self.name) + " ended with status " + str(self.goal_states[status]))
             self.goal_status_reported = True
-
-#        if self.check_action_cb is not None:
-#            self.check_action_cb()
 
     def reset(self):
         self.action_started = False
