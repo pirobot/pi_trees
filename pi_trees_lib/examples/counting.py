@@ -3,7 +3,7 @@
 """
     counting.py - Version 1.0 2013-09-22
     
-    Perform a counting task while monitoring a fake battery level
+    Perform a number of parallel counting tasks
     
     Created for the Pi Robot Project: http://www.pirobot.org
     Copyright (c) 2013 Patrick Goebel.  All rights reserved.
@@ -31,12 +31,12 @@ class CountingExample():
         
         PARALLEL_TASKS = ParallelOne("Counting in Parallel")
         
-        COUNT2 = Count("**", 1, 2, 1)
-        COUNT5 = Count("+++++", 5, 1, -1)
-        COUNT16 = Count("--------", 1, 16, 1)
+        COUNT2 = Count("Count+2", 1, 2, 1)
+        COUNT5 = Count("Count-5", 5, 1, -1)
+        COUNT16 = Count("Count+16", 1, 16, 1)
 
-        PARALLEL_TASKS.add_child(COUNT2)
         PARALLEL_TASKS.add_child(COUNT5)
+        PARALLEL_TASKS.add_child(COUNT2)
         PARALLEL_TASKS.add_child(COUNT16)
         
         BEHAVE.add_child(PARALLEL_TASKS)
