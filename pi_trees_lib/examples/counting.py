@@ -27,7 +27,7 @@ import time
 class CountingExample():
     def __init__(self):
         # The root node
-        BEHAVE = Selector("behave")
+        BEHAVE = Sequence("behave")
         
         PARALLEL_TASKS = ParallelOne("Counting in Parallel")
         
@@ -43,6 +43,7 @@ class CountingExample():
                 
         print "Behavior Tree Structure"
         print_tree(BEHAVE)
+        print_dot_tree(BEHAVE)
             
         # Run the tree
         while True:
@@ -63,13 +64,17 @@ class Count(Task):
         print "Creating task Count", self.start, self.stop, self.step
  
     def run(self):
-        if abs(self.count - self.stop - self.step) > 0:
+        if abs(self.count - self.stop - self.step) <= 0:
+            return TaskStatus.SUCCESS
+        else:
             print self.name, self.count
             time.sleep(0.5)
             self.count += self.step
-            return TaskStatus.RUNNING
+            if abs(self.count - self.stop - self.step) <= 0:
+                return TaskStatus.SUCCESS
+            else:
+                return TaskStatus.RUNNING
 
-        return TaskStatus.SUCCESS
     
     def reset(self):
         self.count = self.start

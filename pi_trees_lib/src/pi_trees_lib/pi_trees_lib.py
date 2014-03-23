@@ -24,6 +24,13 @@
 import string
 import pygraphviz as pgv
 
+from pygraph.classes.graph import graph
+from pygraph.classes.digraph import digraph
+from pygraph.algorithms.searching import breadth_first_search
+from pygraph.readwrite.dot import write
+
+import gv
+
 class TaskStatus():
     """ A class for enumerating task statuses """
     FAILURE = 0
@@ -32,11 +39,14 @@ class TaskStatus():
     
 class Task(object):
     """ "The base Task class """
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name, children=None, *args, **kwargs):
         self.name = name
         self.status = None
         
-        self.children = []
+        if children is None:
+            children = []
+            
+        self.children = children
                          
     def run(self):
         pass
@@ -319,17 +329,12 @@ class ignore_failure(Task):
 def print_tree(tree, indent=0):
     """
         Print an ASCII representation of the tree
-    """       
+    """
     for c in tree.children:
-        if type(c) is Sequence:
-            bullet = "&>"
-        elif type(c) is Selector:
-            bullet = "|>"
-        else:
-            bullet = "*>"
-        print "\t" * indent, bullet, c.name
+        print "\t" * indent, "-->", c.name
         if c.children != []:
             print_tree(c, indent+1)
+
             
 def print_phpsyntax_tree(tree):    
     """
@@ -337,7 +342,7 @@ def print_phpsyntax_tree(tree):
     """
     for c in tree.children:
         print "[" + string.replace(c.name, "_", "."),
-        if c.children != [] and c.children is not None:
+        if c.children != []:
             print_phpsyntax_tree(c),
         print "]",
     
@@ -356,11 +361,22 @@ def print_dot_tree(root):
                 
     add_edges(root)
     
-    gr.write("tree.dot")
+    st, order = breadth_first_search(gr, root=root.name)
+    
+    gst = digraph()
+    gst.add_spanning_tree(st)
+    
+    dot = write(gst)
+    gvv = gv.readstring(dot)
+    
+    gv.layout(gvv,'dot')
+    gv.render(gvv,'png','tree.png')
+    
+    #gr.write("tree.dot")
     
     # Draw as PNG
-    gr.layout(prog='dot')
-    gr.draw('tree.png')
+    #gr.layout(prog='dot')
+    #gr.draw('tree.png')
     
                 
 
