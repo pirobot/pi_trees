@@ -29,9 +29,9 @@ from pygraph.classes.digraph import digraph
 from pygraph.algorithms.searching import breadth_first_search
 from pygraph.readwrite.dot import write
 
-import gv
+#import gv
 
-class TaskStatus():
+class TaskStatus(object):
     """ A class for enumerating task statuses """
     FAILURE = 0
     SUCCESS = 1
@@ -42,7 +42,7 @@ class Task(object):
     def __init__(self, name, children=None, *args, **kwargs):
         self.name = name
         self.status = None
-        
+                
         if children is None:
             children = []
             
@@ -63,6 +63,9 @@ class Task(object):
         
     def prepend_child(self, c):
         self.children.insert(0, c)
+        
+    def insert_child(self, c, i):
+        self.children.insert(i, c)
         
     def get_status(self):
         return self.status
@@ -204,16 +207,15 @@ class Loop(Task):
                         
             for c in self.children:
                 while True:
-                    
                     c.status = c.run()
                     
                     if c.status == TaskStatus.SUCCESS:
                         break
 
                     return c.status
-                    
+                
                 c.reset()
-
+                
             self.loop_count += 1
             
             if self.announce:
@@ -331,10 +333,10 @@ def print_tree(tree, indent=0):
         Print an ASCII representation of the tree
     """
     for c in tree.children:
-        print "\t" * indent, "-->", c.name
+        print "    " * indent, "-->", c.name
+        
         if c.children != []:
             print_tree(c, indent+1)
-
             
 def print_phpsyntax_tree(tree):    
     """
@@ -346,31 +348,31 @@ def print_phpsyntax_tree(tree):
             print_phpsyntax_tree(c),
         print "]",
     
-def print_dot_tree(root):
-    """
-        Print an output compatible with the DOT synatax and Graphiz
-    """
-    gr = pgv.AGraph(rotate='0', bgcolor='lightyellow')
-    gr.node_attr['fontsize']='9'
-                
-    def add_edges(root):
-        for c in root.children:
-            gr.add_edge((root.name, c.name))
-            if c.children != []:
-                add_edges(c)
-                
-    add_edges(root)
-    
-    st, order = breadth_first_search(gr, root=root.name)
-    
-    gst = digraph()
-    gst.add_spanning_tree(st)
-    
-    dot = write(gst)
-    gvv = gv.readstring(dot)
-    
-    gv.layout(gvv,'dot')
-    gv.render(gvv,'png','tree.png')
+# def print_dot_tree(root):
+#     """
+#         Print an output compatible with the DOT synatax and Graphiz
+#     """
+#     gr = pgv.AGraph(rotate='0', bgcolor='lightyellow')
+#     gr.node_attr['fontsize']='9'
+#                 
+#     def add_edges(root):
+#         for c in root.children:
+#             gr.add_edge((root.name, c.name))
+#             if c.children != []:
+#                 add_edges(c)
+#                 
+#     add_edges(root)
+#     
+#     st, order = breadth_first_search(gr, root=root.name)
+#     
+#     gst = digraph()
+#     gst.add_spanning_tree(st)
+#     
+#     dot = write(gst)
+#     gvv = gv.readstring(dot)
+#     
+#     gv.layout(gvv,'dot')
+#     gv.render(gvv,'png','tree.png')
     
     #gr.write("tree.dot")
     

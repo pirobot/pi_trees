@@ -98,7 +98,7 @@ class SimpleActionTask(Task):
     """
         Turn a ROS action into a Task.
     """
-    def __init__(self, name, action, action_type, goal, rate=5, connect_timeout=10, result_timeout=30, reset_after=False, done_cb=None, active_cb=None, feedback_cb=None):
+    def __init__(self, name, action, action_type, goal, rate=5, connect_timeout=10, result_timeout=30, reset_after=False, active_cb=None, done_cb=None, feedback_cb=None):
         super(SimpleActionTask, self).__init__(name)
         
         self.action = action
@@ -113,10 +113,16 @@ class SimpleActionTask(Task):
         
         if done_cb == None:
             done_cb = self.default_done_cb
-            
         self.done_cb = done_cb
+        
+        if active_cb == None:
+            active_cb = self.default_active_cb
         self.active_cb = active_cb
+        
+        if feedback_cb == None:
+            feedback_cb = self.default_feedback_cb
         self.feedback_cb = feedback_cb
+                
         self.action_started = False
         self.action_finished = False
         self.goal_status_reported = False
@@ -147,11 +153,12 @@ class SimpleActionTask(Task):
         # Send the goal
         if not self.action_started:
             rospy.loginfo("Sending " + str(self.name) + " goal to action server...")
-            self.action_client.send_goal(self.goal, done_cb=self.default_done_cb, feedback_cb=self.feedback_cb)
+            self.action_client.send_goal(self.goal, done_cb=self.done_cb, active_cb=self.active_cb, feedback_cb=self.feedback_cb)
             self.action_started = True 
         
-        # We cannot use the wait_for_result() method here as it will block the entire
-        # tree so we break it down in time slices of duriation 1 / rate.
+        ''' We cannot use the wait_for_result() method here as it will block the entire
+            tree so we break it down in time slices of duration 1 / rate.
+        '''
         if not self.action_finished:
             self.time_so_far += self.tick
             self.rate.sleep()
@@ -159,37 +166,40 @@ class SimpleActionTask(Task):
                 self.action_client.cancel_goal()
                 rospy.loginfo("Timed out achieving goal")
                 return TaskStatus.FAILURE
-        else:
-            # Check the current status
-            if self.goal_status == GoalStatus.SUCCEEDED:
-                self.action_finished = True
-                if self.reset_after:
-                    self.reset()
-                return TaskStatus.SUCCESS
-            elif self.goal_status == GoalStatus.PREEMPTED:
-                self.action_started = False
-                self.action_finished = False
-                self.goal_status_reported = False
+            else:
                 return TaskStatus.RUNNING
+        else:
+            # Check the final goal status returned by default_done_cb
+            if self.goal_status == GoalStatus.SUCCEEDED:
+                  self.action_finished = True
+                  if self.reset_after:
+                      self.reset()
+                  return TaskStatus.SUCCESS
             elif self.goal_status == GoalStatus.ABORTED:
                 self.action_started = False
                 self.action_finished = False
                 return TaskStatus.FAILURE
-    
-    def active_cb(self):
-        pass
-        
-    def feedback_cb(self, msg):
-        pass
-            
+            else:
+                self.action_started = False
+                self.action_finished = False
+                self.goal_status_reported = False
+                return TaskStatus.RUNNING
+                            
     def default_done_cb(self, status, result):
-        # Check the current goal status in case we have been preempted
+        # Check the final status
         self.goal_status = status
         self.action_finished = True
+        
         if not self.goal_status_reported:
             rospy.loginfo(str(self.name) + " ended with status " + str(self.goal_states[status]))
             self.goal_status_reported = True
-
+    
+    def default_active_cb(self):
+        pass
+        
+    def default_feedback_cb(self, msg):
+        pass
+    
     def reset(self):
         self.action_started = False
         self.action_finished = False
