@@ -43,7 +43,6 @@ class CountingExample():
                 
         print "Behavior Tree Structure"
         print_tree(BEHAVE)
-        print_dot_tree(BEHAVE)
             
         # Run the tree
         while True:
