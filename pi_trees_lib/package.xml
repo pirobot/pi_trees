@@ -1,6 +1,6 @@
 <package>
 <name>pi_trees_lib</name>
-<version>0.1.0</version>
+<version>0.1.1</version>
 <description>Python/ROS Library for Behavior Trees</description>
 <maintainer email="patrick@pirobot.org">Patrick Goebel</maintainer>
 <license>BSD</license>
