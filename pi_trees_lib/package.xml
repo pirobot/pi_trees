@@ -12,4 +12,8 @@
 
 <run_depend>rospy</run_depend>
 
+<!-- Exclude for now -->
+<!-- exec_depend>python-pygraphviz</exec_depend -->
+<!-- exec_depend>python-pygraph</exec_depend -->>
+
 </package>

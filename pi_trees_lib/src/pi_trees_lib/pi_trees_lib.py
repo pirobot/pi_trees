@@ -22,12 +22,12 @@
 """
 
 import string
-import pygraphviz as pgv
 
-from pygraph.classes.graph import graph
-from pygraph.classes.digraph import digraph
-from pygraph.algorithms.searching import breadth_first_search
-from pygraph.readwrite.dot import write
+# import pygraphviz as pgv
+# from pygraph.classes.graph import graph
+# from pygraph.classes.digraph import digraph
+# from pygraph.algorithms.searching import breadth_first_search
+# from pygraph.readwrite.dot import write
 
 #import gv
 
