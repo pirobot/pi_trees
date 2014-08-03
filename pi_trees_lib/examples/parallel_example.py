@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-    parallel_tasks.py - Version 1.0 2013-09-22
+    parallel_example.py - Version 1.0 2013-09-22
     
     Perform a number of parallel counting tasks
     
