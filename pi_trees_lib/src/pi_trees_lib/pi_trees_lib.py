@@ -28,8 +28,7 @@ import string
 # from pygraph.classes.digraph import digraph
 # from pygraph.algorithms.searching import breadth_first_search
 # from pygraph.readwrite.dot import write
-
-#import gv
+# import gv
 
 class TaskStatus(object):
     """ A class for enumerating task statuses """
