@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-    counting.py - Version 1.0 2013-09-22
+    parallel_tasks.py - Version 1.0 2013-09-22
     
     Perform a number of parallel counting tasks
     
@@ -24,23 +24,28 @@
 from pi_trees_lib.pi_trees_lib import *
 import time
 
-class CountingExample():
+class ParallelExample():
     def __init__(self):
         # The root node
         BEHAVE = Sequence("behave")
         
+        # Create a ParallelOne composite task (returns SUCCESS as soon as any subtask returns SUCCESS)
         PARALLEL_TASKS = ParallelOne("Counting in Parallel")
         
+        # Create three counting tasks
         COUNT2 = Count("Count+2", 1, 2, 1)
         COUNT5 = Count("Count-5", 5, 1, -1)
         COUNT16 = Count("Count+16", 1, 16, 1)
 
+        # Add the tasks to the parallel composite task
         PARALLEL_TASKS.add_child(COUNT5)
         PARALLEL_TASKS.add_child(COUNT2)
         PARALLEL_TASKS.add_child(COUNT16)
         
+        # Add the composite task to the root task
         BEHAVE.add_child(PARALLEL_TASKS)
-                
+        
+        # Print a simple representation of the tree
         print "Behavior Tree Structure"
         print_tree(BEHAVE)
             
@@ -50,7 +55,8 @@ class CountingExample():
             if status == TaskStatus.SUCCESS:
                 print "Finished running tree."
                 break
-                
+
+# A counting task that extends the base Task task
 class Count(Task):
     def __init__(self, name, start, stop, step, *args, **kwargs):
         super(Count, self).__init__(name, *args, **kwargs)
@@ -79,5 +85,5 @@ class Count(Task):
         self.count = self.start
 
 if __name__ == '__main__':
-    tree = CountingExample()
+    tree = ParallelExample()
 
