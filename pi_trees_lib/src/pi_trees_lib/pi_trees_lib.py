@@ -241,6 +241,28 @@ class IgnoreFailure(Task):
 
         return TaskStatus.SUCCESS
     
+class TaskNot(Task):
+    """
+        Turn SUCCESS into FAILURE and vice-versa
+    """
+    def __init__(self, name, *args, **kwargs):
+        super(TaskNot, self).__init__(name, *args, **kwargs)
+ 
+    def run(self):
+        
+        for c in self.children:
+            
+            c.status = c.run()
+            
+            if c.status == TaskStatus.FAILURE:
+                return TaskStatus.SUCCESS
+            
+            elif c.status == TaskStatus.FAILURE:
+                return TaskStatus.SUCCESS
+            
+            else:
+                return c.status
+    
 class AutoRemoveSequence(Task):
     """ 
         Remove each successful subtask from a sequence 
@@ -264,6 +286,31 @@ class AutoRemoveSequence(Task):
                 return TaskStatus.FAILURE
                 
         return TaskStatus.SUCCESS
+    
+class CallbackTask(Task):
+    """ 
+        Turn any callback function (cb) into a task
+    """
+    def __init__(self, name, cb=None, cb_args=[], cb_kwargs={}, **kwargs):
+        super(CallBackTask, self).__init__(name, cb=None, cb_args=[], cb_kwargs={}, **kwargs)
+        
+        self.name = name
+        self.cb = cb
+        self.cb_args = cb_args
+        self.cb_kwargs = cb_kwargs
+  
+    def run(self):
+        status = self.cb(*self.cb_args, **self.cb_kwargs)
+         
+        if status == 0 or status == False:
+            return TaskStatus.FAILURE
+        
+        elif status == 1 or status == True:
+            return TaskStatus.SUCCESS
+        
+        else:
+            return TaskStatus.RUNNING            
+            
 
 class loop(Task):
     """
@@ -320,6 +367,34 @@ class ignore_failure(Task):
             
             if self.status == TaskStatus.FAILURE:
                 return TaskStatus.SUCCESS
+            else:
+                return self.status
+        
+        self.task.run = self.run
+        
+        return self.task
+    
+class task_not(Task):
+    """
+        Turn SUCCESS into FAILURE and vice-versa
+    """
+    def __init__(self, task):
+        new_name = task.name + "_not"
+        super(task_not, self).__init__(new_name)
+
+        self.task = task
+        self.old_run = task.run
+        
+    def run(self):
+        while True:    
+            self.status = self.old_run()
+            
+            if self.status == TaskStatus.FAILURE:
+                return TaskStatus.SUCCESS
+            
+            elif self.status == TaskStatus.FAILURE:
+                return TaskStatus.SUCCESS
+            
             else:
                 return self.status
         
