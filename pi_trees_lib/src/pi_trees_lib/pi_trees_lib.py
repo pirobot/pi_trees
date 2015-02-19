@@ -292,7 +292,7 @@ class CallbackTask(Task):
         Turn any callback function (cb) into a task
     """
     def __init__(self, name, cb=None, cb_args=[], cb_kwargs={}, **kwargs):
-        super(CallBackTask, self).__init__(name, cb=None, cb_args=[], cb_kwargs={}, **kwargs)
+        super(CallbackTask, self).__init__(name, cb=None, cb_args=[], cb_kwargs={}, **kwargs)
         
         self.name = name
         self.cb = cb
