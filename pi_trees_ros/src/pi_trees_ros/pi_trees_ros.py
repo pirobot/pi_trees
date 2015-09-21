@@ -25,6 +25,7 @@ import rospy
 import actionlib
 from actionlib_msgs.msg import GoalStatus
 from pi_trees_lib.pi_trees_lib import *
+import sys
 
 class MonitorTask(Task):
     """
