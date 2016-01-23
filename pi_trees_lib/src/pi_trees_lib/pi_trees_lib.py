@@ -22,6 +22,7 @@
 """
 
 import string
+import random
 
 # import pygraphviz as pgv
 # from pygraph.classes.graph import graph
@@ -125,6 +126,69 @@ class Sequence(Task):
             
         return TaskStatus.SUCCESS
     
+class RandomSelector(Task):
+    """ A selector runs each task in random order until one succeeds,
+        at which point it returns SUCCESS. If all tasks fail, a FAILURE
+        status is returned.  If a subtask is still RUNNING, then a RUNNING
+        status is returned and processing continues until either SUCCESS
+        or FAILURE is returned from the subtask.
+    """
+    def __init__(self, name, *args, **kwargs):
+        super(RandomSelector, self).__init__(name, *args, **kwargs)
+        
+        self.shuffled = False
+ 
+    def run(self):
+        if not self.shuffled:
+            random.shuffle(self.children)
+            self.shuffled = True
+                    
+        for c in self.children:
+            
+            c.status = c.run()
+            
+            if c.status != TaskStatus.FAILURE:
+                if c.status == TaskStatus.SUCCESS:
+                    self.shuffled = False
+
+                return c.status
+
+        self.shuffled = False
+
+        return TaskStatus.FAILURE
+    
+class RandomSequence(Task):
+    """
+        A sequence runs each task in random order until one fails,
+        at which point it returns FAILURE. If all tasks succeed, a SUCCESS
+        status is returned.  If a subtask is still RUNNING, then a RUNNING
+        status is returned and processing continues until either SUCCESS
+        or FAILURE is returned from the subtask.
+    """
+    def __init__(self, name, *args, **kwargs):
+        super(RandomSequence, self).__init__(name, *args, **kwargs)
+        
+        self.shuffled = False
+ 
+    def run(self):
+        if not self.shuffled:
+            random.shuffle(self.children)
+            self.shuffled = True
+        
+        for c in self.children:
+            
+            c.status = c.run()
+                         
+            if c.status != TaskStatus.SUCCESS:
+                if c.status == TaskStatus.FAILURE:
+                    self.shuffled = False
+                    
+                return c.status   
+
+        self.shuffled = False
+
+        return TaskStatus.SUCCESS
+    
 class Iterator(Task):
     """
         Iterate through all child tasks ignoring failure.
@@ -140,6 +204,31 @@ class Iterator(Task):
             if c.status != TaskStatus.SUCCESS and c.status != TaskStatus.FAILURE:
                 return c.status
             
+        return TaskStatus.SUCCESS
+    
+class RandomIterator(Task):
+    """
+        Iterate through all child tasks randomly (without replacement) ignoring failure.
+    """
+    def __init__(self, name, *args, **kwargs):
+        super(RandomIterator, self).__init__(name, *args, **kwargs)
+        
+        self.shuffled = False
+ 
+    def run(self):
+        if not self.shuffled:
+            random.shuffle(self.children)
+            self.shuffled = True
+
+        for c in self.children:
+            
+            c.status = c.run()
+                         
+            if c.status != TaskStatus.SUCCESS and c.status != TaskStatus.FAILURE:
+                return c.status
+            
+        self.shuffled = False
+
         return TaskStatus.SUCCESS
     
 class ParallelOne(Task):
