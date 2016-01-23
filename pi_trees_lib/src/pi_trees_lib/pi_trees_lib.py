@@ -308,6 +308,33 @@ class Loop(Task):
             
             if self.announce:
                 print(self.name + " COMPLETED " + str(self.loop_count) + " LOOP(S)")
+                
+class Limit(Task):
+    """
+        Limit the number of times a task can execute
+    """
+    def __init__(self, name, announce=True, *args, **kwargs):
+        super(Limit, self).__init__(name, *args, **kwargs)
+        
+        self.max_executions = kwargs['max_executions']
+        self.announce = announce
+        self.execution_count = 0
+        self.name = name
+        print("Limit number of executions to: " + str(self.max_executions))
+        
+    def run(self):
+        if self.execution_count >= self.max_executions:
+            self.execution_count = 0
+            
+            if self.announce:
+                print(self.name + " reached maximum number (" + str(self.max_executions) + ") of executions.")
+                
+            return TaskStatus.FAILURE
+                    
+        for c in self.children:
+            c.status = c.run()
+            self.execution_count += 1
+            return c.status
 
 
 class IgnoreFailure(Task):
@@ -398,8 +425,7 @@ class CallbackTask(Task):
             return TaskStatus.SUCCESS
         
         else:
-            return TaskStatus.RUNNING            
-            
+            return TaskStatus.RUNNING
 
 class loop(Task):
     """
