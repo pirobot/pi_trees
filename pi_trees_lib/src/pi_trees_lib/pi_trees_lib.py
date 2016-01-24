@@ -448,7 +448,7 @@ class loop(Task):
         if self.iterations != -1 and self.loop_count >= self.iterations:
             return TaskStatus.SUCCESS
 
-        print("Loop " + str(self.loop_count))
+        print("Loop " + str(self.loop_count + 1))
             
         while True:
             self.status = self.old_run()
