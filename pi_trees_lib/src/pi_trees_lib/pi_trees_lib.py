@@ -378,7 +378,8 @@ class TaskNot(Task):
             
             else:
                 return c.status
-            
+
+# Alias TaskNot to Invert which seems more intuitive
 Invert = TaskNot
     
 class AutoRemoveSequence(Task):
@@ -534,11 +535,14 @@ class task_not(Task):
             if self.status == TaskStatus.FAILURE:
                 return TaskStatus.SUCCESS
             
-            elif self.status == TaskStatus.FAILURE:
-                return TaskStatus.SUCCESS
+            elif self.status == TaskStatus.SUCCESS:
+                return TaskStatus.FAILURE
             
             else:
                 return self.status
+
+# Alias task_not to invert which seems more intuitive
+invert = task_not
 
 def print_tree(tree, indent=0):
     """
