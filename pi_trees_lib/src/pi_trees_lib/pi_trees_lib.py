@@ -465,6 +465,47 @@ class loop(Task):
 
         return self.task
     
+class limit(Task):
+    """
+        Limit a task to the given number of executions
+    """
+    def __init__(self, task, max_executions=-1):
+        new_name = task.name + "_limit_" + str(max_executions)
+        super(limit, self).__init__(new_name)
+
+        self.task = task
+        self.max_executions = max_executions
+        self.old_run = task.run
+        self.old_reset = task.reset
+        self.old_children = task.children
+        self.execution_count = 0
+        
+        print("Limit number of executions to: " + str(self.max_executions))
+        
+    def run(self):
+        if self.max_executions != -1 and self.execution_count >= self.max_executions:
+            self.execution_count = 0
+            
+            if self.announce:
+                print(self.name + " reached maximum number (" + str(self.max_executions) + ") of executions.")
+                
+            return TaskStatus.FAILURE
+            
+        while True:
+            self.status = self.old_run()
+            
+            if self.status == TaskStatus.SUCCESS:
+                break
+            else:
+                return self.status
+                
+        self.old_reset()
+        self.execution_count += 1
+
+        self.task.run = self.run
+
+        return self.task
+    
 class ignore_failure(Task):
     """
         Always return either RUNNING or SUCCESS.
