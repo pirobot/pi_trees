@@ -373,11 +373,13 @@ class TaskNot(Task):
             if c.status == TaskStatus.FAILURE:
                 return TaskStatus.SUCCESS
             
-            elif c.status == TaskStatus.FAILURE:
-                return TaskStatus.SUCCESS
+            elif c.status == TaskStatus.SUCCESS:
+                return TaskStatus.FAILURE
             
             else:
                 return c.status
+            
+Invert = TaskNot
     
 class AutoRemoveSequence(Task):
     """ 
@@ -435,7 +437,6 @@ class loop(Task):
         new_name = task.name + "_loop_" + str(iterations)
         super(loop, self).__init__(new_name)
 
-        self.task = task
         self.iterations = iterations
         self.old_run = task.run
         self.old_reset = task.reset
@@ -460,10 +461,6 @@ class loop(Task):
                 
         self.old_reset()
         self.loop_count += 1
-
-        self.task.run = self.run
-
-        return self.task
     
 class limit(Task):
     """
@@ -473,7 +470,6 @@ class limit(Task):
         new_name = task.name + "_limit_" + str(max_executions)
         super(limit, self).__init__(new_name)
 
-        self.task = task
         self.max_executions = max_executions
         self.old_run = task.run
         self.old_reset = task.reset
@@ -501,10 +497,6 @@ class limit(Task):
                 
         self.old_reset()
         self.execution_count += 1
-
-        self.task.run = self.run
-
-        return self.task
     
 class ignore_failure(Task):
     """
@@ -514,7 +506,6 @@ class ignore_failure(Task):
         new_name = task.name + "_ignore_failure"
         super(ignore_failure, self).__init__(new_name)
 
-        self.task = task
         self.old_run = task.run
         
     def run(self):
@@ -525,11 +516,7 @@ class ignore_failure(Task):
                 return TaskStatus.SUCCESS
             else:
                 return self.status
-        
-        self.task.run = self.run
-        
-        return self.task
-    
+
 class task_not(Task):
     """
         Turn SUCCESS into FAILURE and vice-versa
@@ -538,7 +525,6 @@ class task_not(Task):
         new_name = task.name + "_not"
         super(task_not, self).__init__(new_name)
 
-        self.task = task
         self.old_run = task.run
         
     def run(self):
@@ -553,10 +539,6 @@ class task_not(Task):
             
             else:
                 return self.status
-        
-        self.task.run = self.run
-        
-        return self.task
 
 def print_tree(tree, indent=0):
     """
