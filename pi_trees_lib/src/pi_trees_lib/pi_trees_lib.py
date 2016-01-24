@@ -381,6 +381,26 @@ class TaskNot(Task):
 
 # Alias TaskNot to Invert which seems more intuitive
 Invert = TaskNot
+
+class UntilFail(Task):
+    """
+        Continue executing a task until it fails
+    """
+    def __init__(self, name, *args, **kwargs):
+        super(UntilFail, self).__init__(name, *args, **kwargs)
+ 
+    def run(self):
+        for c in self.children:
+            
+            c.status = c.run()
+            
+            if c.status == TaskStatus.FAILURE:
+                break
+            
+            else:
+                return c.status
+        
+        return TaskStatus.SUCCESS
     
 class AutoRemoveSequence(Task):
     """ 
@@ -543,6 +563,28 @@ class task_not(Task):
 
 # Alias task_not to invert which seems more intuitive
 invert = task_not
+
+class until_fail(Task):
+    """
+        Execute a task until it fails
+    """
+    def __init__(self, task):
+        new_name = task.name + "_until_fail"
+        super(until_fail, self).__init__(new_name)
+
+        self.old_run = task.run
+        
+    def run(self):
+        while True:    
+            self.status = self.old_run()
+            
+            if self.status == TaskStatus.FAILURE:
+                break
+            
+            else:
+                return self.status
+            
+        return TaskStatus.SUCCESS
 
 def print_tree(tree, indent=0):
     """
