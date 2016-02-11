@@ -24,12 +24,7 @@
 import string
 import random
 
-# import pygraphviz as pgv
-# from pygraph.classes.graph import graph
-# from pygraph.classes.digraph import digraph
-# from pygraph.algorithms.searching import breadth_first_search
-# from pygraph.readwrite.dot import write
-# import gv
+import pygraphviz as pgv
 
 class TaskStatus(object):
     """ A class for enumerating task statuses """
@@ -75,6 +70,9 @@ class Task(object):
     
     def announce(self):
         print("Executing task " + str(self.name))
+        
+    def get_type(self):
+        return type(self)
     
     # These next two functions allow us to use the 'with' syntax
     def __enter__(self):
@@ -585,16 +583,36 @@ class until_fail(Task):
                 return self.status
             
         return TaskStatus.SUCCESS
-
-def print_tree(tree, indent=0):
+    
+def print_tree(tree, indent=0, use_symbols=False):
     """
         Print an ASCII representation of the tree
     """
-    for c in tree.children:
-        print "    " * indent, "-->", c.name
-        
-        if c.children != []:
-            print_tree(c, indent+1)
+    if use_symbols:
+        for c in tree.children:
+            if isinstance(c, Selector):
+                print "    " * indent, "--?", c.name
+            elif isinstance(c, Sequence) or isinstance(c, Iterator):
+                print "    " * indent, "-->", c.name
+            elif isinstance(c, RandomSequence) or isinstance(c, RandomIterator):
+                print "    " * indent, "~~>", c.name
+            elif isinstance(c, RandomSelector):
+                print "    " * indent, "~~?", c.name
+            elif isinstance(c, Loop):
+                print "    " * indent, "<->", c.name
+            elif isinstance(c, Invert):
+                print "    " * indent, "--!", c.name
+            else:
+                print "    " * indent, "--|", c.name
+            
+            if c.children != []:
+                print_tree(c, indent+1, use_symbols)
+    else:
+        for c in tree.children:
+            print "    " * indent, "-->", c.name
+             
+            if c.children != []:
+                print_tree(c, indent+1)
             
 def print_phpsyntax_tree(tree):    
     """
@@ -606,38 +624,21 @@ def print_phpsyntax_tree(tree):
             print_phpsyntax_tree(c),
         print "]",
     
-# def print_dot_tree(root):
-#     """
-#         Print an output compatible with the DOT synatax and Graphiz
-#     """
-#     gr = pgv.AGraph(rotate='0', bgcolor='lightyellow')
-#     gr.node_attr['fontsize']='9'
-#                 
-#     def add_edges(root):
-#         for c in root.children:
-#             gr.add_edge((root.name, c.name))
-#             if c.children != []:
-#                 add_edges(c)
-#                 
-#     add_edges(root)
-#     
-#     st, order = breadth_first_search(gr, root=root.name)
-#     
-#     gst = digraph()
-#     gst.add_spanning_tree(st)
-#     
-#     dot = write(gst)
-#     gvv = gv.readstring(dot)
-#     
-#     gv.layout(gvv,'dot')
-#     gv.render(gvv,'png','tree.png')
+def print_dot_tree(root):
+    """
+        Print an output compatible with the DOT synatax and Graphiz
+    """
+    gr = pgv.AGraph(strict=True, directed=True, rotate='0', bgcolor='lightyellow', ordering="out")
+    gr.node_attr['fontsize'] = '9'
+    gr.node_attr['color'] = 'green'
+                 
+    def add_edges(root):
+        for c in root.children:
+            gr.add_edge((root.name, c.name))
+            if c.children != []:
+                add_edges(c)
+                 
+    add_edges(root)
     
-    #gr.write("tree.dot")
+    gr.write("tree.dot")
     
-    # Draw as PNG
-    #gr.layout(prog='dot')
-    #gr.draw('tree.png')
-    
-                
-
- 
