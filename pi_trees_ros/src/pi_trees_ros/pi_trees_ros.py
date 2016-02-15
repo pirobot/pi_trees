@@ -112,9 +112,12 @@ class SimpleActionTask(Task):
         self.result_timeout = result_timeout
         self.reset_after = reset_after
         
-        if done_cb == None:
-            done_cb = self.default_done_cb
-        self.done_cb = done_cb
+        if done_cb:
+            self.user_done_cb = done_cb
+        else:
+            self.user_done_cb = None
+        
+        self.done_cb = self.default_done_cb
         
         if active_cb == None:
             active_cb = self.default_active_cb
@@ -194,6 +197,9 @@ class SimpleActionTask(Task):
         if not self.goal_status_reported:
             rospy.loginfo(str(self.name) + " ended with status " + str(self.goal_states[status]))
             self.goal_status_reported = True
+            
+        if self.user_done_cb:
+            self.user_done_cb(status, result)
     
     def default_active_cb(self):
         pass
