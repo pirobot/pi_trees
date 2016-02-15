@@ -34,9 +34,11 @@ class TaskStatus(object):
     
 class Task(object):
     """ "The base Task class """
-    def __init__(self, name, children=None, *args, **kwargs):
+    def __init__(self, name, children=None, reset_after=False, announce=False, *args, **kwargs):
         self.name = name
         self.status = None
+        self.reset_after = reset_after
+        self._announce = announce
                 
         if children is None:
             children = []
@@ -115,12 +117,19 @@ class Sequence(Task):
         super(Sequence, self).__init__(name, *args, **kwargs)
  
     def run(self):
+        if self._announce:
+            self.announce()
+            
         for c in self.children:
             
             c.status = c.run()
                          
             if c.status != TaskStatus.SUCCESS:
                 return c.status   
+            
+        if self.reset_after:
+            for c in self.children:
+                c.reset()
             
         return TaskStatus.SUCCESS
     
@@ -280,7 +289,7 @@ class Loop(Task):
         super(Loop, self).__init__(name, *args, **kwargs)
         
         self.iterations = kwargs['iterations']
-        self.announce = announce
+        self._announce = announce
         self.loop_count = 0
         self.name = name
         print("Loop iterations: " + str(self.iterations))
@@ -304,7 +313,7 @@ class Loop(Task):
                 
             self.loop_count += 1
             
-            if self.announce:
+            if self._announce:
                 print(self.name + " COMPLETED " + str(self.loop_count) + " LOOP(S)")
                 
 class Limit(Task):
@@ -315,7 +324,7 @@ class Limit(Task):
         super(Limit, self).__init__(name, *args, **kwargs)
         
         self.max_executions = kwargs['max_executions']
-        self.announce = announce
+        self._announce = announce
         self.execution_count = 0
         self.name = name
         print("Limit number of executions to: " + str(self.max_executions))
@@ -324,7 +333,7 @@ class Limit(Task):
         if self.execution_count >= self.max_executions:
             self.execution_count = 0
             
-            if self.announce:
+            if self._announce:
                 print(self.name + " reached maximum number (" + str(self.max_executions) + ") of executions.")
                 
             return TaskStatus.FAILURE
@@ -354,6 +363,42 @@ class IgnoreFailure(Task):
                 return c.status
 
         return TaskStatus.SUCCESS
+    
+    
+class AlwaysFail(Task):
+    """
+        Always return FAILURE
+    """
+    def __init__(self, name, *args, **kwargs):
+        super(AlwaysFail, self).__init__(name, *args, **kwargs)
+ 
+    def run(self):
+        
+        for c in self.children:
+            
+            c.status = c.run()
+            
+            return c.status
+
+        return TaskStatus.FAILURE
+    
+class AlwaysSucceed(Task):
+    """
+        Always return SUCCESS
+    """
+    def __init__(self, name, *args, **kwargs):
+        super(AlwaysSucceed, self).__init__(name, *args, **kwargs)
+ 
+    def run(self):
+        
+        for c in self.children:
+            
+            c.status = c.run()
+            
+            return c.status
+
+        return TaskStatus.SUCCESS
+    
     
 class TaskNot(Task):
     """
@@ -438,8 +483,11 @@ class CallbackTask(Task):
   
     def run(self):
         status = self.cb(*self.cb_args, **self.cb_kwargs)
-         
-        if status == 0 or status == False:
+        
+        if status is None:
+            return TaskStatus.RUNNING
+        
+        elif status == 0 or status == False:
             return TaskStatus.FAILURE
         
         elif status == 1 or status == True:
@@ -447,6 +495,18 @@ class CallbackTask(Task):
         
         else:
             return TaskStatus.RUNNING
+        
+def WaitTask(Task):
+    """
+        This is a *blocking* wait task.  The interval argument is in seconds.
+    """
+    def __init__(self, name, interval, *args, **kwargs):
+        super(WaitTask, self).__init__(name, interval, *args, **kwargs)
+ 
+    def run(self):
+        sleep(interval)
+
+        return TaskStatus.SUCCESS
 
 class loop(Task):
     """
@@ -501,7 +561,7 @@ class limit(Task):
         if self.max_executions != -1 and self.execution_count >= self.max_executions:
             self.execution_count = 0
             
-            if self.announce:
+            if self._announce:
                 print(self.name + " reached maximum number (" + str(self.max_executions) + ") of executions.")
                 
             return TaskStatus.FAILURE
@@ -533,6 +593,25 @@ class ignore_failure(Task):
             
             if self.status == TaskStatus.FAILURE:
                 return TaskStatus.SUCCESS
+            else:
+                return self.status
+            
+class ignore_success(Task):
+    """
+        Always return FAILURE or RUNNING
+    """
+    def __init__(self, task):
+        new_name = task.name + "_ignore_success"
+        super(ignore_success, self).__init__(new_name)
+
+        self.old_run = task.run
+        
+    def run(self):
+        while True:    
+            self.status = self.old_run()
+            
+            if self.status == TaskStatus.SUCCESS:
+                return TaskStatus.FAILURE
             else:
                 return self.status
 
@@ -584,27 +663,37 @@ class until_fail(Task):
             
         return TaskStatus.SUCCESS
     
+class always_fail(Task):
+    """
+        Execute a task but always return FAILTURE
+    """
+    def __init__(self, task):
+        new_name = task.name + "_always_fail"
+        super(always_fail, self).__init__(new_name)
+
+        self.old_run = task.run
+        
+    def run(self):
+        while True:    
+            self.old_run()
+            
+            self.status = TaskStatus.FAILURE
+            
+        return TaskStatus.FAILURE
+    
+    
 def print_tree(tree, indent=0, use_symbols=False):
     """
         Print an ASCII representation of the tree
     """
     if use_symbols:
+        if indent == 0:
+            print_tree_symbol(tree, indent)
+            indent += 1
+
         for c in tree.children:
-            if isinstance(c, Selector):
-                print "    " * indent, "--?", c.name
-            elif isinstance(c, Sequence) or isinstance(c, Iterator):
-                print "    " * indent, "-->", c.name
-            elif isinstance(c, RandomSequence) or isinstance(c, RandomIterator):
-                print "    " * indent, "~~>", c.name
-            elif isinstance(c, RandomSelector):
-                print "    " * indent, "~~?", c.name
-            elif isinstance(c, Loop):
-                print "    " * indent, "<->", c.name
-            elif isinstance(c, Invert):
-                print "    " * indent, "--!", c.name
-            else:
-                print "    " * indent, "--|", c.name
-            
+            print_tree_symbol(c, indent)
+
             if c.children != []:
                 print_tree(c, indent+1, use_symbols)
     else:
@@ -612,7 +701,28 @@ def print_tree(tree, indent=0, use_symbols=False):
             print "    " * indent, "-->", c.name
              
             if c.children != []:
-                print_tree(c, indent+1)
+                print_tree(c, indent + 1)
+                
+def print_tree_symbol(c, indent):
+    """
+        Use ASCII symbols to represent Sequence, Selector, Task, etc.
+    """
+    if isinstance(c, Selector):
+        print "    " * indent, "--?",
+    elif isinstance(c, Sequence) or isinstance(c, Iterator):
+        print "    " * indent, "-->",
+    elif isinstance(c, RandomSequence) or isinstance(c, RandomIterator):
+        print "    " * indent, "~~>",
+    elif isinstance(c, RandomSelector):
+        print "    " * indent, "~~?",
+    elif isinstance(c, Loop):
+        print "    " * indent, "<->",
+    elif isinstance(c, Invert):
+        print "    " * indent, "--!",
+    else:
+        print "    " * indent, "--|",
+    
+    print c.name
             
 def print_phpsyntax_tree(tree):    
     """
