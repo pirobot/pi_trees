@@ -51,6 +51,8 @@ class Task(object):
     def reset(self):
         for c in self.children:
             c.reset()
+            
+        self.status = None
 
     def add_child(self, c):
         self.children.append(c)
@@ -102,6 +104,9 @@ class Selector(Task):
             
             if c.status != TaskStatus.FAILURE:
                 return c.status
+            
+        if self.reset_after:
+            self.reset()
 
         return TaskStatus.FAILURE
  
@@ -128,8 +133,7 @@ class Sequence(Task):
                 return c.status   
             
         if self.reset_after:
-            for c in self.children:
-                c.reset()
+            self.reset()
             
         return TaskStatus.SUCCESS
     
@@ -161,6 +165,9 @@ class RandomSelector(Task):
                 return c.status
 
         self.shuffled = False
+        
+        if self.reset_after:
+            self.reset()
 
         return TaskStatus.FAILURE
     
@@ -193,6 +200,9 @@ class RandomSequence(Task):
                 return c.status   
 
         self.shuffled = False
+        
+        if self.reset_after:
+            self.reset()
 
         return TaskStatus.SUCCESS
     
@@ -205,11 +215,14 @@ class Iterator(Task):
  
     def run(self):
         for c in self.children:
-            
+                        
             c.status = c.run()
                          
-            if c.status != TaskStatus.SUCCESS and c.status != TaskStatus.FAILURE:
+            if c.status == TaskStatus.RUNNING:
                 return c.status
+            
+        if self.reset_after:
+            self.reset()
             
         return TaskStatus.SUCCESS
     
@@ -231,10 +244,13 @@ class RandomIterator(Task):
             
             c.status = c.run()
                          
-            if c.status != TaskStatus.SUCCESS and c.status != TaskStatus.FAILURE:
+            if c.status == TaskStatus.RUNNING:
                 return c.status
             
         self.shuffled = False
+        
+        if self.reset_after:
+            self.reset()
 
         return TaskStatus.SUCCESS
     
