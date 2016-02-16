@@ -137,13 +137,13 @@ class SimpleActionTask(Task):
                             'SUCCEEDED', 'ABORTED', 'REJECTED',
                             'PREEMPTING', 'RECALLING', 'RECALLED',
                             'LOST']
-    
+            
         rospy.loginfo("Connecting to action " + action)
 
         # Subscribe to the base action server
         self.action_client = actionlib.SimpleActionClient(action, action_type)
 
-        rospy.loginfo("Waiting for move_base action server...")
+        rospy.loginfo("Waiting for action server...")
         
         # Wait up to timeout seconds for the action server to become available
         try:
@@ -169,25 +169,20 @@ class SimpleActionTask(Task):
             if self.time_so_far > self.result_timeout:
                 self.action_client.cancel_goal()
                 rospy.loginfo("Timed out achieving goal")
-                return TaskStatus.FAILURE
+                self.status = TaskStatus.FAILURE
             else:
-                return TaskStatus.RUNNING
+                self.status = TaskStatus.RUNNING
         else:
             # Check the final goal status returned by default_done_cb
             if self.goal_status == GoalStatus.SUCCEEDED:
-                  self.action_finished = True
-                  if self.reset_after:
-                      self.reset()
-                  return TaskStatus.SUCCESS
-            elif self.goal_status == GoalStatus.ABORTED:
-                self.action_started = False
-                self.action_finished = False
-                return TaskStatus.FAILURE
+                self.status = TaskStatus.SUCCESS
             else:
-                self.action_started = False
-                self.action_finished = False
-                self.goal_status_reported = False
-                return TaskStatus.RUNNING
+                self.status = TaskStatus.FAILURE
+                
+            if self.reset_after:
+                self.reset()
+        
+        return self.status
                             
     def default_done_cb(self, status, result):
         # Check the final status
@@ -212,3 +207,4 @@ class SimpleActionTask(Task):
         self.action_finished = False
         self.goal_status_reported = False
         self.time_so_far = 0.0
+        super(SimpleActionTask, self).reset()
