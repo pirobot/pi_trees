@@ -33,7 +33,7 @@ class TaskStatus(object):
     RUNNING = 2
 
 # A global value to track when the tree's status has changed.  Used in the print_dot_tree() function.
-last_dot_tree = None
+last_dot_tree = ''
     
 class Task(object):
     """ "The base Task class """
@@ -798,10 +798,9 @@ def print_dot_tree(root):
     add_edges(root)
     
     current_dot_tree = gr.string()
-    
+        
     if current_dot_tree != last_dot_tree:
         gr.write("tree.dot")
         last_dot_tree = gr.string()
-        
 
     
