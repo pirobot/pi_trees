@@ -31,6 +31,9 @@ class TaskStatus(object):
     FAILURE = 0
     SUCCESS = 1
     RUNNING = 2
+
+# A global value to track when the tree's status has changed.  Used in the print_dot_tree() function.
+last_dot_tree = None
     
 class Task(object):
     """ "The base Task class """
@@ -86,7 +89,7 @@ class Task(object):
         if  exc_type is not None:
             return False
         return True
-
+    
 class Selector(Task):
     """ A selector runs each task in order until one succeeds,
         at which point it returns SUCCESS. If all tasks fail, a FAILURE
@@ -103,11 +106,14 @@ class Selector(Task):
             c.status = c.run()
             
             if c.status != TaskStatus.FAILURE:
+                if c.status == TaskStatus.SUCCESS:
+                    if self.reset_after:
+                        self.reset()
+                        return self.status
+                    else:
+                        return c.status
                 return c.status
             
-        if self.reset_after:
-            self.reset()
-
         return TaskStatus.FAILURE
  
 class Sequence(Task):
@@ -131,11 +137,12 @@ class Sequence(Task):
                          
             if c.status != TaskStatus.SUCCESS:
                 return c.status   
-            
+        
         if self.reset_after:
             self.reset()
-            
-        return TaskStatus.SUCCESS
+            return self.status
+        else:
+            return TaskStatus.SUCCESS
     
 class RandomSelector(Task):
     """ A selector runs each task in random order until one succeeds,
@@ -416,12 +423,12 @@ class AlwaysSucceed(Task):
         return TaskStatus.SUCCESS
     
     
-class TaskNot(Task):
+class Invert(Task):
     """
         Turn SUCCESS into FAILURE and vice-versa
     """
     def __init__(self, name, *args, **kwargs):
-        super(TaskNot, self).__init__(name, *args, **kwargs)
+        super(Invert, self).__init__(name, *args, **kwargs)
  
     def run(self):
         
@@ -438,8 +445,8 @@ class TaskNot(Task):
             else:
                 return c.status
 
-# Alias TaskNot to Invert which seems more intuitive
-Invert = TaskNot
+# Alias TaskNot to Invert for backwards compatibility
+TaskNot = Invert
 
 class UntilFail(Task):
     """
@@ -499,18 +506,20 @@ class CallbackTask(Task):
   
     def run(self):
         status = self.cb(*self.cb_args, **self.cb_kwargs)
-        
+                
         if status is None:
-            return TaskStatus.RUNNING
-        
-        elif status == 0 or status == False:
-            return TaskStatus.FAILURE
-        
-        elif status == 1 or status == True:
-            return TaskStatus.SUCCESS
-        
+            self.status = TaskStatus.RUNNING
+         
+        elif status:
+            self.status = TaskStatus.SUCCESS
+ 
         else:
-            return TaskStatus.RUNNING
+            self.status = TaskStatus.FAILURE
+            
+        return self.status
+    
+    def reset(self):
+        self.status = None
         
 def WaitTask(Task):
     """
@@ -756,15 +765,43 @@ def print_dot_tree(root):
     """
     gr = pgv.AGraph(strict=True, directed=True, rotate='0', bgcolor='lightyellow', ordering="out")
     gr.node_attr['fontsize'] = '9'
-    gr.node_attr['color'] = 'green'
+    gr.node_attr['color'] = 'black' 
+    
+    global last_dot_tree
                  
     def add_edges(root):
         for c in root.children:
+            if isinstance(c, Sequence) or isinstance(c, Iterator) or isinstance(c, RandomSequence) or isinstance(c, RandomIterator):
+                gr.add_node(c.name, shape="cds")
+            elif isinstance(c, Selector) or isinstance(c, RandomSelector):
+                gr.add_node(c.name, shape="diamond")
+            elif isinstance(c, Invert):
+                gr.add_node(c.name, shape="house")
+                
             gr.add_edge((root.name, c.name))
+            node = gr.get_node(c.name)
+
+            if c.status == TaskStatus.RUNNING:
+                node.attr['fillcolor'] = 'yellow'
+                node.attr['style'] = 'filled'
+                node.attr['border'] = 'bold'
+            elif c.status == TaskStatus.SUCCESS:
+                node.attr['color'] = 'green'
+            elif c.status == TaskStatus.FAILURE:
+                node.attr['color'] = 'red'
+            else:
+                node.attr['color'] = 'black'
+
             if c.children != []:
                 add_edges(c)
-                 
+    
     add_edges(root)
     
-    gr.write("tree.dot")
+    current_dot_tree = gr.string()
+    
+    if current_dot_tree != last_dot_tree:
+        gr.write("tree.dot")
+        last_dot_tree = gr.string()
+        
+
     
