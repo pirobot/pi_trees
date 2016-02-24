@@ -112,6 +112,8 @@ class SimpleActionTask(Task):
         self.result_timeout = result_timeout
         self.reset_after = reset_after
         
+        self.final_status = None
+        
         if done_cb:
             self.user_done_cb = done_cb
         else:
@@ -137,6 +139,8 @@ class SimpleActionTask(Task):
                             'SUCCEEDED', 'ABORTED', 'REJECTED',
                             'PREEMPTING', 'RECALLING', 'RECALLED',
                             'LOST']
+        
+        self.retry_goal_states = [GoalStatus.PREEMPTED, GoalStatus.PENDING]
             
         rospy.loginfo("Connecting to action " + action)
 
@@ -169,20 +173,34 @@ class SimpleActionTask(Task):
             if self.time_so_far > self.result_timeout:
                 self.action_client.cancel_goal()
                 rospy.loginfo("Timed out achieving goal")
-                self.status = TaskStatus.FAILURE
+                self.action_finished = True
+                return TaskStatus.FAILURE
             else:
-                self.status = TaskStatus.RUNNING
+                return TaskStatus.RUNNING
         else:
             # Check the final goal status returned by default_done_cb
             if self.goal_status == GoalStatus.SUCCEEDED:
                 self.status = TaskStatus.SUCCESS
+            
+            # This case handles PREEMPTED and PENDING
+            elif self.goal_status in self.retry_goal_states:
+                self.status = TaskStatus.RUNNING
+                self.action_started = False
+                self.action_finished = False
+                self.time_so_far = 0
+            
+            # Otherwise, consider the task to have failed
             else:
                 self.status = TaskStatus.FAILURE
-                
+            
+            # Store the final status before we reset
+            self.final_status = self.status
+
+            # Reset the task if the reset_after flag is True
             if self.reset_after:
                 self.reset()
         
-        return self.status
+        return self.final_status
                             
     def default_done_cb(self, status, result):
         # Check the final status
