@@ -24,6 +24,8 @@
 import string
 import random
 
+import os
+
 import pygraphviz as pgv
 
 class TaskStatus(object):
@@ -759,13 +761,16 @@ def print_phpsyntax_tree(tree):
             print_phpsyntax_tree(c),
         print "]",
     
-def print_dot_tree(root):
+def print_dot_tree(root, dotfilepath=None):
     """
         Print an output compatible with the DOT synatax and Graphiz
     """
     gr = pgv.AGraph(strict=True, directed=True, rotate='0', bgcolor='lightyellow', ordering="out")
     gr.node_attr['fontsize'] = '9'
-    gr.node_attr['color'] = 'black' 
+    gr.node_attr['color'] = 'black'
+    
+    if dotfilepath is None:
+        dotfilepath = os.path.expanduser('~') + '/.ros/tree.dot'
     
     global last_dot_tree
                  
@@ -800,7 +805,7 @@ def print_dot_tree(root):
     current_dot_tree = gr.string()
         
     if current_dot_tree != last_dot_tree:
-        gr.write("tree.dot")
+        gr.write(dotfilepath)
         last_dot_tree = gr.string()
 
     
