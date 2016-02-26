@@ -57,9 +57,6 @@ class MonitorTask(Task):
     def run(self):
         return self.status
     
-    def reset(self):
-        pass
-    
 class ServiceTask(Task):
     """
         Turn a ROS service into a Task.
@@ -93,7 +90,7 @@ class ServiceTask(Task):
             return TaskStatus.FAILURE
         
     def reset(self):
-        pass
+        self.status = None
         
 class SimpleActionTask(Task):
     """
@@ -140,7 +137,7 @@ class SimpleActionTask(Task):
                             'PREEMPTING', 'RECALLING', 'RECALLED',
                             'LOST']
         
-        self.retry_goal_states = [GoalStatus.PREEMPTED, GoalStatus.PENDING]
+        self.retry_goal_states = [GoalStatus.PREEMPTED]
             
         rospy.loginfo("Connecting to action " + action)
 
@@ -162,7 +159,8 @@ class SimpleActionTask(Task):
         if not self.action_started:
             rospy.loginfo("Sending " + str(self.name) + " goal to action server...")
             self.action_client.send_goal(self.goal, done_cb=self.done_cb, active_cb=self.active_cb, feedback_cb=self.feedback_cb)
-            self.action_started = True 
+            self.action_started = True
+            self.activate_time = rospy.Time.now()
         
         ''' We cannot use the wait_for_result() method here as it will block the entire
             tree so we break it down in time slices of duration 1 / rate.
@@ -182,7 +180,7 @@ class SimpleActionTask(Task):
             if self.goal_status == GoalStatus.SUCCEEDED:
                 self.status = TaskStatus.SUCCESS
             
-            # This case handles PREEMPTED and PENDING
+            # This case handles PREEMPTED
             elif self.goal_status in self.retry_goal_states:
                 self.status = TaskStatus.RUNNING
                 self.action_started = False
@@ -200,19 +198,29 @@ class SimpleActionTask(Task):
             if self.reset_after:
                 self.reset()
         
+        self.action_client.wait_for_result(rospy.Duration(10))
         return self.final_status
                             
-    def default_done_cb(self, status, result):
-        # Check the final status
-        self.goal_status = status
+    def default_done_cb(self, result_state, result):
+        """Goal Done Callback
+        This callback resets the active flags and reports the duration of the action.
+        Also, if the user has defined a result_cb, it is called here before the
+        method returns.
+        """
+        self.goal_status = result_state
         self.action_finished = True
         
         if not self.goal_status_reported:
-            rospy.loginfo(str(self.name) + " ended with status " + str(self.goal_states[status]))
+            self._duration = rospy.Time.now() - self.activate_time
+            
+            rospy.loginfo("Action " + self.name + " terminated after "\
+                    + str(self._duration.to_sec()) + " seconds with result "\
+                    + self.goal_states[self.action_client.get_state()] + ".")
+            
             self.goal_status_reported = True
             
         if self.user_done_cb:
-            self.user_done_cb(status, result)
+            self.user_done_cb(result_state, result)
     
     def default_active_cb(self):
         pass
@@ -221,8 +229,10 @@ class SimpleActionTask(Task):
         pass
     
     def reset(self):
+        rospy.logdebug("RESETTING " + str(self.name))
         self.action_started = False
         self.action_finished = False
         self.goal_status_reported = False
+        self.status = self.final_status
         self.time_so_far = 0.0
         super(SimpleActionTask, self).reset()
