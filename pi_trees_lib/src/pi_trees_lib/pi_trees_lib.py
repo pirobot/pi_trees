@@ -786,6 +786,8 @@ def print_dot_tree(root, dotfilepath=None):
                 gr.add_node(c.name, shape="cds")
             elif isinstance(c, Selector) or isinstance(c, RandomSelector):
                 gr.add_node(c.name, shape="diamond")
+            elif isinstance(c, ParallelOne) or isinstance(c, ParallelAll):
+                gr.add_node(c.name, shape="parallelogram")
             elif isinstance(c, Invert):
                 gr.add_node(c.name, shape="house")
                 
