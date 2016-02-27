@@ -27,7 +27,12 @@ from std_msgs.msg import Float32
 from geometry_msgs.msg import Twist
 from rbx2_msgs.srv import *
 from pi_trees_ros.pi_trees_ros import *
-from rbx2_tasks.task_setup import *
+from pi_trees_lib.task_setup import *
+
+class BlackBoard():
+    def __init__(self):
+        self.battery_level = None
+        self.charging = None
 
 class Patrol():
     def __init__(self):
@@ -38,6 +43,9 @@ class Patrol():
         
         # Initialize a number of parameters and variables
         setup_task_environment(self)
+        
+        # Initialize the black board
+        self.blackboard = BlackBoard()
         
         # How frequently do we "tic" the tree?
         rate = rospy.get_param('~rate', 10)
@@ -54,7 +62,7 @@ class Patrol():
         n_waypoints = len(self.waypoints)
         
         # Create simple action navigation task for each waypoint
-        for i in range(n_waypoints + 1):
+        for i in range(n_waypoints):
             goal = MoveBaseGoal()
             goal.target_pose.header.frame_id = 'map'
             goal.target_pose.header.stamp = rospy.Time.now()
@@ -98,15 +106,20 @@ class Patrol():
         
         # Add the battery check and recharge tasks to the "stay healthy" task
         with STAY_HEALTHY:
-            # The check battery condition (uses MonitorTask)
-            CHECK_BATTERY = MonitorTask("CHECK_BATTERY", "battery_level", Float32, self.check_battery)
+            # Monitor the fake battery level by subscribing to the /battery_level topic
+            MONITOR_BATTERY = MonitorTask("MONITOR_BATTERY", "battery_level", Float32, self.monitor_battery)
             
-            # The charge robot task (uses ServiceTask)
-            CHARGE_ROBOT = ChargeRobot("CHARGE_ROBOT", interval=3)
-            RECHARGE_COMPLETE = ServiceTask("RECHARGE_COMPLETE", "battery_simulator/set_battery_level", SetBatteryLevel, 100, result_cb=self.recharge_cb)
+            # Is the fake battery level below threshold?
+            CHECK_BATTERY = CallbackTask("BATTERY_OK?", self.check_battery)  
+            
+            # Set the fake battery level back to 100 using a ServiceTask
+            CHARGE_COMPLETE = ServiceTask("CHARGE_COMPLETE", "/battery_simulator/set_battery_level", SetBatteryLevel, 100, result_cb=self.recharge_cb)
+            
+            # Sleep for the given interval to simulate charging
+            CHARGING = RechargeRobot("CHARGING", interval=3, blackboard=self.blackboard)
       
             # Build the recharge sequence using inline construction
-            RECHARGE = Sequence("RECHARGE", [NAV_DOCK_TASK, CHARGE_ROBOT, RECHARGE_COMPLETE])
+            RECHARGE = Sequence("RECHARGE", [NAV_DOCK_TASK, CHARGING, CHARGE_COMPLETE], reset_after=True)
                 
             # Add the check battery and recharge tasks to the stay healthy selector
             STAY_HEALTHY.add_child(CHECK_BATTERY)
@@ -122,19 +135,30 @@ class Patrol():
             tic.sleep()
             print_dot_tree(BEHAVE, dotfilepath)
             
-    def check_battery(self, msg):
-        if msg.data is None:
-            return TaskStatus.RUNNING
+    def monitor_battery(self, msg):
+        # Store the battery level as published on the fake battery level topic
+        self.blackboard.battery_level = msg.data
+        return True
+    
+    def check_battery(self):
+        # Don't run the check if we are charging
+        if self.blackboard.charging:
+            return False
+        
+        if self.blackboard.battery_level is None:
+            return None
+        elif self.blackboard.battery_level < self.low_battery_threshold:
+            rospy.loginfo("LOW BATTERY - level: " + str(int(self.blackboard.battery_level)))
+            return False
         else:
-            if msg.data < self.low_battery_threshold:
-                rospy.loginfo("LOW BATTERY - level: " + str(int(msg.data)))
-                return TaskStatus.FAILURE
-            else:
-                return TaskStatus.SUCCESS
+            return True
     
     def recharge_cb(self, result):
         rospy.loginfo("BATTERY CHARGED!")
-        return TaskStatus.SUCCESS
+        self.blackboard.battery_level = 100
+        self.blackboard.charging = False
+        rospy.sleep(2)
+        return True
             
     def shutdown(self):
         rospy.loginfo("Stopping the robot...")
@@ -142,29 +166,31 @@ class Patrol():
         self.cmd_vel_pub.publish(Twist())
         rospy.sleep(1)
         
-class ChargeRobot(Task):
-    def __init__(self, name, interval=1):
-        super(ChargeRobot, self).__init__(name)
+class RechargeRobot(Task):
+    def __init__(self, name, interval=3, blackboard=None):
+        super(RechargeRobot, self).__init__(name)
        
         self.name = name
         self.interval = interval
+        self.blackboard = blackboard
         
         self.timer = 0
-        self.stopped = False
          
     def run(self):
-        if self.status != TaskStatus.SUCCESS:
-            rospy.logdebug("CHARGING THE ROBOT!")
-            self.stopped = False
-            if self.timer < self.interval:
-                self.timer += 0.1
-                rospy.sleep(0.1)
-                self.status = TaskStatus.RUNNING
-            else:
-                self.timer = 0
-                self.status = TaskStatus.SUCCESS
+        if self.timer == 0:
+            rospy.loginfo("CHARGING THE ROBOT!")
             
-        return self.status
+        if self.timer < self.interval:
+            self.timer += 0.1
+            rospy.sleep(0.1)
+            self.blackboard.charging = True
+            return TaskStatus.RUNNING
+        else:
+            return TaskStatus.SUCCESS
+    
+    def reset(self):
+        self.status = None
+        self.timer = 0
 
 if __name__ == '__main__':
     tree = Patrol()
