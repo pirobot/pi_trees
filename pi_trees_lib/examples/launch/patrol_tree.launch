@@ -3,7 +3,7 @@
  <arg name="dotfilepath" default="$(env HOME)/.ros/tree.dot" />
   
   <node pkg="pi_trees_lib" name="patrol_tree" type="patrol_tree.py" output="screen">
-    <param name="rate" value="10" />
+    <param name="rate" value="5" />
     <param name="square_size" value="1.0" />
     <param name="n_patrols" value="-1" />
     <param name="low_battery_threshold" value="50" />
