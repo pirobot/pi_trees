@@ -765,7 +765,7 @@ def print_dot_tree(root, dotfilepath=None):
     """
         Print an output compatible with the DOT synatax and Graphiz
     """
-    gr = pgv.AGraph(strict=True, directed=True, rotate='0', bgcolor='lightyellow', ordering="out")
+    gr = pgv.AGraph(strict=True, directed=True, rotate='0', bgcolor='white', ordering="out")
     gr.node_attr['fontsize'] = '9'
     gr.node_attr['color'] = 'black'
     
@@ -773,6 +773,12 @@ def print_dot_tree(root, dotfilepath=None):
         dotfilepath = os.path.expanduser('~') + '/.ros/tree.dot'
     
     global last_dot_tree
+    
+    gr.add_node(root.name)
+    node = gr.get_node(root.name)
+    node.attr['fillcolor'] = 'yellow'
+    node.attr['style'] = 'filled'
+    node.attr['border'] = 'bold'
                  
     def add_edges(root):
         for c in root.children:
