@@ -131,7 +131,7 @@ class Patrol():
         
         # Run the tree
         while not rospy.is_shutdown():
-            BEHAVE.run()
+            BEHAVE.status = BEHAVE.run()
             tic.sleep()
             print_dot_tree(BEHAVE, dotfilepath)
             
