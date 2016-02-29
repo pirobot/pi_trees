@@ -774,11 +774,19 @@ def print_dot_tree(root, dotfilepath=None):
     
     global last_dot_tree
     
+    # Add the root node
     gr.add_node(root.name)
     node = gr.get_node(root.name)
-    node.attr['fillcolor'] = 'yellow'
-    node.attr['style'] = 'filled'
-    node.attr['border'] = 'bold'
+    if root.status == TaskStatus.RUNNING:
+        node.attr['fillcolor'] = 'yellow'
+        node.attr['style'] = 'filled'
+        node.attr['border'] = 'bold'
+    elif root.status == TaskStatus.SUCCESS:
+        node.attr['color'] = 'green'
+    elif root.status == TaskStatus.FAILURE:
+        node.attr['color'] = 'red'
+    else:
+        node.attr['color'] = 'black'
                  
     def add_edges(root):
         for c in root.children:
