@@ -138,13 +138,15 @@ class Sequence(Task):
             c.status = c.run()
                          
             if c.status != TaskStatus.SUCCESS:
+                if c.status == TaskStatus.FAILURE:
+                    if self.reset_after:
+                        self.reset()
                 return c.status   
         
         if self.reset_after:
             self.reset()
-            return self.status
-        else:
-            return TaskStatus.SUCCESS
+        
+        return TaskStatus.SUCCESS
     
 class RandomSelector(Task):
     """ A selector runs each task in random order until one succeeds,
