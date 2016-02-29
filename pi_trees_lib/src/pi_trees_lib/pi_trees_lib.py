@@ -351,48 +351,6 @@ class ParallelAll(Task):
         super(ParallelAll, self).reset()
         self.success = dict()
         self.index = 0
-    
-# class ParallelOne(Task):
-#     """
-#         A parallel task runs each child task at (roughly) the same time.
-#         The ParallelOne task returns success as soon as any child succeeds.
-#     """
-#     def __init__(self, name, *args, **kwargs):
-#         super(ParallelOne, self).__init__(name, *args, **kwargs)
-#                  
-#     def run(self):
-#         for c in self.children:
-#             c.status = c.run()
-# 
-#             if c.status == TaskStatus.SUCCESS:
-#                 return TaskStatus.SUCCESS
-#         
-#         return TaskStatus.FAILURE
-#         
-# class ParallelAll(Task):
-#     """
-#         A parallel task runs each child task at (roughly) the same time.
-#         The ParallelAll task requires all subtasks to succeed for it to succeed.
-#     """
-#     def __init__(self, name, *args, **kwargs):
-#         super(ParallelAll, self).__init__(name, *args, **kwargs)
-#                  
-#     def run(self):
-#         n_success = 0
-#         n_children = len(self.children)
-# 
-#         for c in self.children:
-#             c.status = c.run()
-#             if c.status == TaskStatus.SUCCESS:
-#                 n_success += 1
-# 
-#             if c.status == TaskStatus.FAILURE:
-#                 return TaskStatus.FAILURE
-# 
-#         if n_success == n_children:
-#             return TaskStatus.SUCCESS
-#         else:
-#             return TaskStatus.RUNNING
         
 class Loop(Task):
     """
