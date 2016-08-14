@@ -111,10 +111,13 @@ class Selector(Task):
                 if c.status == TaskStatus.SUCCESS:
                     if self.reset_after:
                         self.reset()
-                        return self.status
+                        return TaskStatus.SUCCESS
                     else:
                         return c.status
                 return c.status
+            
+        if self.reset_after:
+            self.reset()
             
         return TaskStatus.FAILURE
  
@@ -141,6 +144,7 @@ class Sequence(Task):
                 if c.status == TaskStatus.FAILURE:
                     if self.reset_after:
                         self.reset()
+                        return TaskStatus.FAILURE
                 return c.status   
         
         if self.reset_after:
@@ -824,6 +828,7 @@ def print_dot_tree(root, dotfilepath=None):
     # Add the root node
     gr.add_node(root.name)
     node = gr.get_node(root.name)
+    
     if root.status == TaskStatus.RUNNING:
         node.attr['fillcolor'] = 'yellow'
         node.attr['style'] = 'filled'
