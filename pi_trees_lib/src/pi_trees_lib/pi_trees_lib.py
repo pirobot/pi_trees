@@ -776,34 +776,11 @@ def print_tree(tree, indent=0, use_symbols=False):
         for c in tree.children:
             print_tree_symbol(c, indent)
 
-            if c.children != []:
-                print_tree(c, indent+1, use_symbols)
-    else:
-        for c in tree.children:
-            print "    " * indent, "-->", c.name
-             
-            if c.children != []:
-                print_tree(c, indent + 1)
-                
-def print_tree(tree, indent=0, use_symbols=False):
-    """
-        Print an ASCII representation of the tree
-    """
-    if use_symbols:
-        if indent == 0:
-            print_tree_symbol(tree, indent)
-            indent += 1
-        
-        if isinstance(tree, Composite):
-            for c in tree.children:
-                print_tree_symbol(c, indent)
-                print_tree(c, indent+1, use_symbols)
-                
-        elif isinstance(tree, Decorator):
-            c = tree.child
-            print_tree_symbol(c, indent)
-            print_tree(c, indent, use_symbols)
-
+            try:
+                if c.children != []:
+                    print_tree(c, indent+1, use_symbols)
+            except:
+                pass
     else:
         for c in tree.children:
             print "    " * indent, "-->", c.name
@@ -813,6 +790,27 @@ def print_tree(tree, indent=0, use_symbols=False):
                     print_tree(c, indent + 1)
             except:
                 pass
+                
+def print_tree_symbol(c, indent):
+    """
+        Use ASCII symbols to represent Sequence, Selector, Task, etc.
+    """
+    if isinstance(c, Selector):
+        print "    " * indent, "--?",
+    elif isinstance(c, Sequence) or isinstance(c, Iterator):
+        print "    " * indent, "-->",
+    elif isinstance(c, RandomSequence) or isinstance(c, RandomIterator):
+        print "    " * indent, "~~>",
+    elif isinstance(c, RandomSelector):
+        print "    " * indent, "~~?",
+    elif isinstance(c, Loop):
+        print "    " * indent, "<->",
+    elif isinstance(c, Invert):
+        print "    " * indent, "--!",
+    else:
+        print "    " * indent, "--|",
+    
+    print c.name
             
 def print_phpsyntax_tree(tree):    
     """
