@@ -785,26 +785,34 @@ def print_tree(tree, indent=0, use_symbols=False):
             if c.children != []:
                 print_tree(c, indent + 1)
                 
-def print_tree_symbol(c, indent):
+def print_tree(tree, indent=0, use_symbols=False):
     """
-        Use ASCII symbols to represent Sequence, Selector, Task, etc.
+        Print an ASCII representation of the tree
     """
-    if isinstance(c, Selector):
-        print "    " * indent, "--?",
-    elif isinstance(c, Sequence) or isinstance(c, Iterator):
-        print "    " * indent, "-->",
-    elif isinstance(c, RandomSequence) or isinstance(c, RandomIterator):
-        print "    " * indent, "~~>",
-    elif isinstance(c, RandomSelector):
-        print "    " * indent, "~~?",
-    elif isinstance(c, Loop):
-        print "    " * indent, "<->",
-    elif isinstance(c, Invert):
-        print "    " * indent, "--!",
+    if use_symbols:
+        if indent == 0:
+            print_tree_symbol(tree, indent)
+            indent += 1
+        
+        if isinstance(tree, Composite):
+            for c in tree.children:
+                print_tree_symbol(c, indent)
+                print_tree(c, indent+1, use_symbols)
+                
+        elif isinstance(tree, Decorator):
+            c = tree.child
+            print_tree_symbol(c, indent)
+            print_tree(c, indent, use_symbols)
+
     else:
-        print "    " * indent, "--|",
-    
-    print c.name
+        for c in tree.children:
+            print "    " * indent, "-->", c.name
+             
+            try:
+                if c.children != []:
+                    print_tree(c, indent + 1)
+            except:
+                pass
             
 def print_phpsyntax_tree(tree):    
     """
