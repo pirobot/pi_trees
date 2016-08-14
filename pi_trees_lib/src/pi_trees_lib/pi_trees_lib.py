@@ -574,7 +574,7 @@ class CallbackTask(Task):
     def reset(self):
         self.status = None
         
-def WaitTask(Task):
+class WaitTask(Task):
     """
         This is a *blocking* wait task.  The interval argument is in seconds.
     """
