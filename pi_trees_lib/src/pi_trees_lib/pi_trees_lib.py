@@ -28,6 +28,8 @@ import os
 
 import pygraphviz as pgv
 
+from time import sleep
+
 class TaskStatus(object):
     """ A class for enumerating task statuses """
     FAILURE = 0
@@ -580,9 +582,11 @@ class WaitTask(Task):
     """
     def __init__(self, name, interval, *args, **kwargs):
         super(WaitTask, self).__init__(name, interval, *args, **kwargs)
+        
+        self.interval = interval
  
     def run(self):
-        sleep(interval)
+        sleep(self.interval)
 
         return TaskStatus.SUCCESS
 
