@@ -49,7 +49,8 @@ def weighted_choice(weights):
 def weighted_shuffle(a,w):
     w = list(w) # make a copy of w
     if len(a) != len(w):
-        print("ERROR: Weighted_shuffle: Lenghts of lists don't match.")
+        print("ERROR: Weighted_shuffle: Number of weights does not match number of children.")
+        os._exit(0)
         return
 
     r = [0]*len(a) # contains the random shuffle
