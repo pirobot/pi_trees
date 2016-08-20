@@ -22,7 +22,7 @@
 """
 
 import string
-import random
+from random import random, shuffle
 
 import os
 
@@ -38,6 +38,26 @@ class TaskStatus(object):
 
 # A global value to track when the tree's status has changed.  Used in the print_dot_tree() function.
 last_dot_tree = ''
+
+def weighted_choice(weights):
+    rnd = random() * sum(weights)
+    for i, w in enumerate(weights):
+        rnd -= w
+        if rnd < 0:
+            return i
+
+def weighted_shuffle(a,w):
+    w = list(w) # make a copy of w
+    if len(a) != len(w):
+        print("ERROR: Weighted_shuffle: Lenghts of lists don't match.")
+        return
+
+    r = [0]*len(a) # contains the random shuffle
+    for i in range(len(a)):
+        j = weighted_choice(w)
+        r[i]=a[j]
+        w[j] = 0
+    return r
     
 class Task(object):
     """ "The base Task class """
@@ -168,7 +188,7 @@ class RandomSelector(Task):
  
     def run(self):
         if not self.shuffled:
-            random.shuffle(self.children)
+            shuffle(self.children)
             self.shuffled = True
                     
         for c in self.children:
@@ -203,7 +223,7 @@ class RandomSequence(Task):
  
     def run(self):
         if not self.shuffled:
-            random.shuffle(self.children)
+            shuffle(self.children)
             self.shuffled = True
         
         for c in self.children:
@@ -222,6 +242,77 @@ class RandomSequence(Task):
             self.reset()
 
         return TaskStatus.SUCCESS
+    
+class WeightedRandomSequence(Task):
+    """
+        A sequence runs each task in random order until one fails,
+        at which point it returns FAILURE. If all tasks succeed, a SUCCESS
+        status is returned.  If a subtask is still RUNNING, then a RUNNING
+        status is returned and processing continues until either SUCCESS
+        or FAILURE is returned from the subtask.
+    """
+    def __init__(self, name, weights, *args, **kwargs):
+        super(WeightedRandomSequence, self).__init__(name, *args, **kwargs)
+        
+        self.shuffled = False
+        self.weights = weights
+ 
+    def run(self):
+        if not self.shuffled:
+            shuffled_children = weighted_shuffle(self.children, self.weights)
+            self.shuffled = True
+        
+        for c in shuffled_children:
+            
+            c.status = c.run()
+                         
+            if c.status != TaskStatus.SUCCESS:
+                if c.status == TaskStatus.FAILURE:
+                    self.shuffled = False
+                    
+                return c.status   
+
+        self.shuffled = False
+        
+        if self.reset_after:
+            self.reset()
+
+        return TaskStatus.SUCCESS
+    
+class WeightedRandomSelector(Task):
+    """ A selector runs each task in random order until one succeeds,
+        at which point it returns SUCCESS. If all tasks fail, a FAILURE
+        status is returned.  If a subtask is still RUNNING, then a RUNNING
+        status is returned and processing continues until either SUCCESS
+        or FAILURE is returned from the subtask.
+    """
+    def __init__(self, name, weights, *args, **kwargs):
+        super(WeightedRandomSelector, self).__init__(name, *args, **kwargs)
+        
+        self.shuffled = False
+        self.weights = weights
+ 
+    def run(self):
+        if not self.shuffled:
+            shuffled_children = weighted_shuffle(self.children, self.weights)
+            self.shuffled = True
+                    
+        for c in shuffled_children:
+            
+            c.status = c.run()
+            
+            if c.status != TaskStatus.FAILURE:
+                if c.status == TaskStatus.SUCCESS:
+                    self.shuffled = False
+
+                return c.status
+
+        self.shuffled = False
+        
+        if self.reset_after:
+            self.reset()
+
+        return TaskStatus.FAILURE
     
 class Iterator(Task):
     """
@@ -254,10 +345,39 @@ class RandomIterator(Task):
  
     def run(self):
         if not self.shuffled:
-            random.shuffle(self.children)
+            shuffle(self.children)
             self.shuffled = True
 
         for c in self.children:
+            
+            c.status = c.run()
+                         
+            if c.status == TaskStatus.RUNNING:
+                return c.status
+            
+        self.shuffled = False
+        
+        if self.reset_after:
+            self.reset()
+
+        return TaskStatus.SUCCESS
+    
+class WeightedRandomIterator(Task):
+    """
+        Iterate through all child tasks randomly (without replacement) ignoring failure.
+    """
+    def __init__(self, name, weights, *args, **kwargs):
+        super(WeightedRandomIterator, self).__init__(name, *args, **kwargs)
+        
+        self.shuffled = False
+        self.weights = weights
+ 
+    def run(self):
+        if not self.shuffled:
+            suffled_children = weighted_shuffle(self.children, self.weights)
+            self.shuffled = True
+
+        for c in suffled_children:
             
             c.status = c.run()
                          
