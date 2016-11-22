@@ -486,35 +486,34 @@ class Loop(Task):
     """
     def __init__(self, name, announce=True, *args, **kwargs):
         super(Loop, self).__init__(name, *args, **kwargs)
-        
+
         self.iterations = kwargs['iterations']
         self._announce = announce
         self.loop_count = 0
         self.name = name
         print("Loop iterations: " + str(self.iterations))
-        
-    def run(self):
-        
-        while True:
-            if self.iterations != -1 and self.loop_count >= self.iterations:
-                return TaskStatus.SUCCESS
-                        
-            for c in self.children:
-                while True:
-                    c.status = c.run()
-                    
-                    if c.status == TaskStatus.SUCCESS:
-                        break
 
-                    return c.status
-                
+    def run(self):
+
+        c = self.children[0]
+
+        while self.iterations == -1 or self.loop_count < self.iterations:
+            c.status = c.run()
+
+            status = c.status
+
+            self.status = status
+
+            if status == TaskStatus.SUCCESS or status == TaskStatus.FAILURE:
+                self.loop_count += 1
+
+                if self._announce:
+                    print(self.name + " COMPLETED " + str(self.loop_count) + " LOOP(S)")
+
                 c.reset()
-                
-            self.loop_count += 1
-            
-            if self._announce:
-                print(self.name + " COMPLETED " + str(self.loop_count) + " LOOP(S)")
-                
+
+            return status
+
 class Limit(Task):
     """
         Limit the number of times a task can execute
@@ -529,19 +528,30 @@ class Limit(Task):
         print("Limit number of executions to: " + str(self.max_executions))
         
     def run(self):
+        c = self.children[0]
+
         if self.execution_count >= self.max_executions:
-            self.execution_count = 0
-            
+
             if self._announce:
                 print(self.name + " reached maximum number (" + str(self.max_executions) + ") of executions.")
                 
+            if self.reset_after:
+                self.reset()
+
             return TaskStatus.FAILURE
                     
-        for c in self.children:
-            c.status = c.run()
-            self.execution_count += 1
-            return c.status
+        c.status = c.run()
 
+        if c.status != TaskStatus.RUNNING:
+            self.execution_count += 1
+
+        return c.status
+
+    def reset(self):
+        c = self.children[0]
+        c.reset()
+        self.execution_count = 0
+        self.status = None
 
 class IgnoreFailure(Task):
     """
@@ -624,26 +634,78 @@ class Invert(Task):
 # Alias TaskNot to Invert for backwards compatibility
 TaskNot = Invert
 
-class UntilFail(Task):
+class UntilFailure(Task):
     """
-        Continue executing a task until it fails
+        Continue executing a task until it fails or max_attempts is reached.
     """
-    def __init__(self, name, *args, **kwargs):
-        super(UntilFail, self).__init__(name, *args, **kwargs)
- 
+    def __init__(self, name, max_attempts=-1, *args, **kwargs):
+        super(UntilFailure, self).__init__(name, *args, **kwargs)
+
+        self.max_attempts = max_attempts
+        self.attempts = 0
+
     def run(self):
-        for c in self.children:
+        c = self.children[0]
+
+        while self.attempts < self.max_attempts or self.max_attempts == -1:
+
+            c.status = c.run()
+
+            if c.status == TaskStatus.FAILURE:
+                return TaskStatus.SUCCESS
+
+            if c.status == TaskStatus.SUCCESS:
+                self.attempts += 1
+                c.reset()
             
+            return TaskStatus.RUNNING
+        
+        return TaskStatus.FAILURE
+
+    def reset(self):
+        c = self.children[0]
+        c.reset()
+        self.attempts = 0
+
+# Alias UntilFail to UntilFailure for backwards compatibility
+UntilFail = UntilFailure
+
+class UntilSuccess(Task):
+    """
+        Continue executing a task until it succeeds or max_attempts is reached.
+    """
+    def __init__(self, name, max_attempts=-1, *args, **kwargs):
+        super(UntilSuccess, self).__init__(name, *args, **kwargs)
+
+        self.max_attempts = max_attempts
+        self.attempts = 0
+
+    def run(self):
+        c = self.children[0]
+
+        while self.attempts < self.max_attempts or self.max_attempts == -1:
+
             c.status = c.run()
             
+            if c.status == TaskStatus.SUCCESS:
+                return TaskStatus.SUCCESS
+
             if c.status == TaskStatus.FAILURE:
-                break
+                self.attempts += 1
+                c.reset()
             
-            else:
-                return c.status
+            return TaskStatus.RUNNING
         
-        return TaskStatus.SUCCESS
-    
+        if self.reset_after:
+            self.reset()
+
+        return TaskStatus.FAILURE
+
+    def reset(self):
+        c = self.children[0]
+        c.reset()
+        self.attempts = 0
+
 class AutoRemoveSequence(Task):
     """ 
         Remove each successful subtask from a sequence 
