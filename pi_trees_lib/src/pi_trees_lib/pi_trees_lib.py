@@ -980,12 +980,16 @@ def print_tree_symbol(c, indent):
     """
     if isinstance(c, Selector):
         print "    " * indent, "--?",
-    elif isinstance(c, Sequence) or isinstance(c, Iterator):
+    elif isinstance(c, (Sequence, Iterator)):
         print "    " * indent, "-->",
-    elif isinstance(c, RandomSequence) or isinstance(c, RandomIterator):
+    elif isinstance(c, (RandomSequence, RandomIterator, WeightedRandomSequence, WeightedRandomIterator)):
         print "    " * indent, "~~>",
-    elif isinstance(c, RandomSelector):
+    elif isinstance(c, (RandomSelector, WeightedRandomSelector)):
         print "    " * indent, "~~?",
+    elif isinstance(c, ParallelOne):
+        print "    " * indent, "==?",
+    elif isinstance(c, ParallelAll):
+        print "    " * indent, "==>",
     elif isinstance(c, Loop):
         print "    " * indent, "<->",
     elif isinstance(c, Invert):
@@ -1035,14 +1039,16 @@ def print_dot_tree(root, dotfilepath=None):
                  
     def add_edges(root):
         for c in root.children:
-            if isinstance(c, Sequence) or isinstance(c, Iterator) or isinstance(c, RandomSequence) or isinstance(c, RandomIterator):
+            if isinstance(c, (Sequence, Iterator, RandomSequence, RandomIterator, WeightedRandomSequence, WeightedRandomIterator)):
                 gr.add_node(c.name, shape="cds")
-            elif isinstance(c, Selector) or isinstance(c, RandomSelector):
+            elif isinstance(c, (Selector, RandomSelector, WeightedRandomSelector)):
                 gr.add_node(c.name, shape="diamond")
-            elif isinstance(c, ParallelOne) or isinstance(c, ParallelAll):
+            elif isinstance(c, (ParallelOne, ParallelAll)):
                 gr.add_node(c.name, shape="parallelogram")
             elif isinstance(c, Invert):
                 gr.add_node(c.name, shape="house")
+            else:
+                gr.add_node(c.name)
                 
             gr.add_edge((root.name, c.name))
             node = gr.get_node(c.name)
@@ -1060,7 +1066,7 @@ def print_dot_tree(root, dotfilepath=None):
 
             if c.children != []:
                 add_edges(c)
-    
+
     add_edges(root)
     
     current_dot_tree = gr.string()
@@ -1068,5 +1074,3 @@ def print_dot_tree(root, dotfilepath=None):
     if current_dot_tree != last_dot_tree:
         gr.write(dotfilepath)
         last_dot_tree = gr.string()
-
-    
